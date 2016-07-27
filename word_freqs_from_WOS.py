@@ -13,19 +13,23 @@ def read_abs_csv(filename, abss):
     """Read titles and abstracts from a CSV file, adding them to the given list"""
     with io.open(filename, encoding='utf-8') as fi:
         csvreader = csv.reader(fi, delimiter='\t')
+        next(csvreader) # skip header line
         for row in csvreader:
             title = row[8].strip()
             abstract = row[21].strip()
-            abss.append((title,abstract))
+            year = int(row[44].strip())
+            abss.append((title, abstract, year))
 
 
+def get_tag_type(tagtype, pairs): 
+    """
+    Given a list of (word,tag) pairs, return a list of words which are tagged as nouns/verbs/etc
+    The tagtype could be 'NN', 'JJ', 'VB', etc
+    """
+    return [w for (w, tag) in pairs if tag.startswith(tagtype)]            
 
-def get_nouns(pairs):
-    """Given a list of (word,tag) pairs, return a list of words which are tagged as nouns"""
-    return [w for (w, tag) in pairs if tag.startswith("NN")]            
 
-
-def count_freqs(texts, outfile):
+def count_freqs(tagtype, texts, outfile):
     """Count words and stems from the texts and output them into outfile"""
     word_dict = {}
     stem_dict = {}
@@ -34,7 +38,7 @@ def count_freqs(texts, outfile):
             continue
         tokens = nltk.word_tokenize(text)
         tagged = nltk.pos_tag(tokens)
-        nouns = get_nouns(tagged)
+        nouns = get_tag_type(tagtype, tagged)
         stemmer = nltk.stem.PorterStemmer()
         # Collect stems and their orginal words, as pairs
         stems = [(stemmer.stem(token).lower(), token.lower()) for token in nouns]
@@ -72,10 +76,11 @@ def main():
     read_abs_csv(filename, abss)
 
     # Titles
-    count_freqs([t for (t,a) in abss], "titles_"+filename)
+    count_freqs('JJ', [t for (t, a, y) in abss], "titlesAdjs_"+filename)
 
     # Abstracts
-    count_freqs([a for (t,a) in abss], "abstracts_"+filename)
+    count_freqs('JJ', [a for (t, a, y) in abss], "abstractsAdjs_"+filename)
+
 
 
 if __name__ == "__main__":
